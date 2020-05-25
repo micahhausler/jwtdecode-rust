@@ -8,7 +8,7 @@ Decodes JWT tokens
 ## Example
 
 ```
-cat < EOF > token.jwt
+cat <<EOF > token.jwt
 eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJsc2t5d2Fsa2VyIiwiaWF0IjoyMzMzNjY0MDB9.k-tTF2CIZ-vu6-syRnCw3Zlc4jwfBCXAQRAyk0mtmso
 EOF
 

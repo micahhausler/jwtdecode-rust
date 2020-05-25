@@ -1,7 +1,6 @@
 /// jwtdecode is a command line tool for inspecting JWT tokens.
 ///
 ///
-
 extern crate clap;
 use clap::{App, Arg};
 
@@ -12,7 +11,7 @@ use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let matches = App::new("jwtdecode")
         .version("0.1.0")
         .about("Decode JWT tokens")
@@ -32,46 +31,26 @@ fn main() {
         )
         .get_matches();
 
+    let stdin = io::stdin();
+    let stdout = io::stdout();
     let input_file = matches.value_of("INPUT");
 
-    let results: Vec<String> = match input_file {
+    let input: Box<dyn io::BufRead> = match input_file {
         Some(file_name) => {
-            let f = File::open(file_name).unwrap();
-            let mut lines = vec![];
-            for line in io::BufReader::new(f).lines() {
-                match line {
-                    Ok(line) => lines.push(line),
-                    _ => continue,
-                }
-            }
-            lines
+            let f = File::open(file_name)?;
+            Box::new(io::BufReader::new(f))
         }
-        _ => {
-            let mut lines = vec![];
-            for line in io::stdin().lock().lines() {
-                match line {
-                    Ok(line) => lines.push(line),
-                    _ => continue,
-                }
-            }
-            lines
-        }
+        None => Box::new(stdin.lock()),
     };
-    for result in results {
-        let jwt = JWT::new(result.as_str());
-        match jwt {
-            Ok(token) => {
-                let header = serde_json::to_string_pretty(&token.header).unwrap();
-                println!("{}", header);
-                let body = serde_json::to_string_pretty(&token.body).unwrap();
-                println!("{}", body);
-                if matches.is_present("signature") {
-                    eprintln!("{}", &token.signature);
-                }
-            }
-            Err(error) => {
-                println!("Error: {}", error);
-            }
+
+    for result in input.lines() {
+        let token = JWT::new(result?)?;
+        serde_json::to_writer_pretty(stdout.lock(), &token.header)?;
+        serde_json::to_writer_pretty(stdout.lock(), &token.body)?;
+        if matches.is_present("signature") {
+            eprintln!("{}", &token.signature);
         }
     }
+
+    Ok(())
 }
